@@ -1,0 +1,12 @@
+{
+  "name": "bpmn-gateway",
+  "version": "0.1.0",
+  "description": "Api point gateway to Camunda and Zeebe",
+  "private": true,
+  "dependencies": {
+    "zeebe-node": "~0.25.0",
+    "express": "~4.17.1",
+    "axios": "~0.20.0",
+    "kafkajs": "~1.14.0"
+  }
+}

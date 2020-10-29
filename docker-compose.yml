@@ -1,0 +1,84 @@
+version: '3.7'
+
+services:
+  loadbalance:
+    image: nginx:1.19.1
+    restart: always
+    container_name: bpmn-gateway
+    ports:
+      - 2700:80
+    expose:
+      - 80
+    volumes:
+      - ./cfg/apipoint.conf:/etc/nginx/conf.d/default.conf
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      default:
+
+  apipoint1:
+    image: maximmonin/bpmn-apipoint
+    container_name: bpmn-apipoint1
+    restart: always
+    expose:
+      - 3000
+    networks:
+      default:
+    environment:
+      - LogLevel=info
+      - CamundaUrl=http://camunda-nginx:80/engine-rest
+      - ZeebeUrl=zeebe-nginx:80
+    volumes:
+      - ./node/server.js:/app/server.js
+      - /etc/localtime:/etc/localtime:ro
+
+  apipoint2:
+    image: maximmonin/bpmn-apipoint
+    container_name: bpmn-apipoint2
+    restart: always
+    expose:
+      - 3000
+    networks:
+      default:
+    environment:
+      - LogLevel=info
+      - CamundaUrl=http://camunda-nginx:80/engine-rest
+      - ZeebeUrl=zeebe-nginx:80
+    volumes:
+      - ./node/server.js:/app/server.js
+      - /etc/localtime:/etc/localtime:ro
+
+  camunda-nginx:
+    image: nginx:1.19.1
+    restart: always
+    container_name: bpmn-camunda-gateway
+    ports:
+      - 2701:80
+    expose:
+      - 80
+    volumes:
+      - ./cfg/camunda.conf:/etc/nginx/conf.d/default.conf
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      default:
+
+  zeebe-nginx:
+    image: nginx:1.19.1
+    restart: always
+    container_name: bpmn-zeebe-gateway
+    ports:
+      - 2702:80
+    expose:
+      - 80
+    volumes:
+      - ./cfg/zeebe.conf:/etc/nginx/conf.d/default.conf
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      default:
+
+networks:
+  default:
+    driver: bridge
+    driver_opts:
+      com.docker.network.enable_ipv6: "false"
+    ipam:
+      driver: default

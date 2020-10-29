@@ -1,3 +1,3 @@
 # bpmn-gateway
 
-Api point to Camunda and Zeebe
+Api point gateway to Camunda and Zeebe

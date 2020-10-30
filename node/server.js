@@ -234,7 +234,7 @@ async function ZeebePublishMessage (req, res) {
       timeToLive: timetolive
     });
     status = "ACTIVE";
-    result = {processId: data.id, status: status, data: data };
+    result = {processId: data.workflowInstanceKey, status: status, data: data };
 
     res.status(200).end(JSON.stringify({result: result}));
   }

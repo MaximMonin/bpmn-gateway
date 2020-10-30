@@ -1,5 +1,10 @@
 const { ZBClient, Duration, ZBLogger } = require('zeebe-node');
 const express = require('express');
+const axios = require ('axios'); axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+const http = require ('http');
+const formidable = require('formidable');
+const FormData = require('form-data')
+const fs = require('fs');
 
 const Zeebeurl = process.env.ZeebeUrl || 'localhost:26500';
 const Camundaurl = process.env.CamundaUrl || 'http://camunda:8080/engine-rest';
@@ -130,27 +135,30 @@ const formUrlEncoded = x =>
 
 async function CamundaDeployWorkflow (req, res) {
   const ProcessKey = req.params.key;
-  const iParams = Object.assign({}, req.query, req.body);
 
-  console.log ('Deploying Camunda workflow... ' + ProcessKey + ' ' + JSON.stringify(iParams));
-  const filename = iParams.upload;
+  var filepath = '';
+  var filename = '';
+  var form = new formidable.IncomingForm();
+  form.keepExtensions = true;     //keep file extension
 
-  axios({
-    method: 'post',
-    url: Camundaurl + '/deployment/create',
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-    data: formUrlEncoded({
-     deploymentName: ProcessKey,
-     upload: filename
+  form.parse(req, function(err, fields, files) {
+    filepath = files.upload.path;
+    filename = files.upload.name;
+    console.log ('Deploying Camunda workflow... ' + ProcessKey + ' ' + filename);
+
+    const formData = new FormData();
+    formData.append("upload", fs.createReadStream(filepath), filename);
+    formData.append("deployment-name", ProcessKey);
+    axios.post(Camundaurl + '/deployment/create', formData, { headers: formData.getHeaders() })
+    .then(response => {
+      const result = response.data;
+      fs.unlinkSync(filepath);
+      res.status(200).end(JSON.stringify({result: result}));
     })
-  })
-  .then(response => {
-    const result = response.data;
-    res.status(200).end(JSON.stringify({result: result}));
-  })
-  .catch(error => {
-    console.log(error.response.data);
-    res.status(200).end(JSON.stringify({error: error.response.data}));
+    .catch(error => {
+      console.log(error.response.data);
+      res.status(200).end(JSON.stringify({error: error.response.data}));
+    });
   });
 }
 
@@ -230,21 +238,30 @@ async function ZeebePublishMessage (req, res) {
 
 async function ZeebeDeployWorkflow (req, res) {
   const ProcessKey = req.params.key;
-  const iParams = Object.assign({}, req.query, req.body);
 
-  console.log ('Deploying Zeebe workflow... ' + ProcessKey + ' ' + JSON.stringify(iParams));
-  const filename = iParams.upload;
+  var filepath = '';
+  var filename = '';
+  var form = new formidable.IncomingForm();
+  form.keepExtensions = true;     //keep file extension
 
-  try {
-    const data = await zbclient.deployWorkflow(filename);
-    const result = {status: 'deployed', data: data };
+  form.parse(req, function(err, fields, files) {
+    filepath = files.upload.path;
+    filename = files.upload.name;
+    console.log ('Deploying Zeebe workflow... ' + ProcessKey + ' ' + filename);
 
-    res.status(200).end(JSON.stringify({result: result}));
-  }
-  catch (e) {
-    console.error(e);
-    res.status(200).end(JSON.stringify({error: e}));
-  }
+    try {
+      (async (filepath) => {
+        const data = await zbclient.deployWorkflow(filepath);
+        const result = {status: 'deployed', data: data };
+        fs.unlinkSync(filepath);
+        res.status(200).end(JSON.stringify({result: result}));
+      })(filepath)
+    }
+    catch (e) {
+      console.error(e);
+      res.status(200).end(JSON.stringify({error: e}));
+    }
+  });
 };
 
 async function ZeebeSubscribeResult (req, res) {

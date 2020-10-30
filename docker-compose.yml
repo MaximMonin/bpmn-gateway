@@ -60,6 +60,8 @@ services:
       - /etc/localtime:/etc/localtime:ro
     networks:
       default:
+    extra_hosts:
+      - "camunda:$CAMUNDA"
 
   zeebe-nginx:
     image: nginx:1.19.1
@@ -74,6 +76,8 @@ services:
       - /etc/localtime:/etc/localtime:ro
     networks:
       default:
+    extra_hosts:
+      - "zeebe:$ZEEBE"
 
 networks:
   default:

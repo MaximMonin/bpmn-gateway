@@ -117,11 +117,16 @@ async function CamundaPublishMessage (req, res) {
   const timetolive = iParams.timeToLive || 10000;
   const vars = iParams.variables;
 
+  var data;
+  var result;
+  var status;
   axios.post( Camundaurl + '/message', 
     {messageName: messageName, processInstanceId: processId, processVariables: vars, all: true, resultEnabled: true, variablesInResultEnabled: true}, 
     {httpAgent: new http.Agent({ keepAlive: true }), timeout: 60000})
   .then(response => {
-    const result = response.data;
+    data = response.data;
+    status = "ACTIVE";
+    result = {processId: data[0].processInstance.id,status: status, data: data };
     res.status(200).end(JSON.stringify({result: result}));
   })
   .catch(error => {
@@ -129,9 +134,6 @@ async function CamundaPublishMessage (req, res) {
     res.status(200).end(JSON.stringify({error: error.response.data}));
   });
 };
-
-const formUrlEncoded = x =>
-   Object.keys(x).reduce((p, c) => p + `&${c}=${encodeURIComponent(x[c])}`, '')
 
 async function CamundaDeployWorkflow (req, res) {
   const ProcessKey = req.params.key;
@@ -221,14 +223,20 @@ async function ZeebePublishMessage (req, res) {
   const timetolive = iParams.timeToLive || 10000;
   const vars = iParams.variables;
 
+  var data;
+  var result;
+  var status;
   try {
-    await zbclient.publishMessage({
+    data = await zbclient.publishMessage({
       correlationKey: Key,
       name: messageName,
       variables: vars,
       timeToLive: timetolive
     });
-    res.status(200).end(JSON.stringify({result: 'message published'}));
+    status = "ACTIVE";
+    result = {processId: data.id, status: status, data: data };
+
+    res.status(200).end(JSON.stringify({result: result}));
   }
   catch (e) {
     console.error(e);

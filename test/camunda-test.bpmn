@@ -16,6 +16,7 @@
     <bpmn:sequenceFlow id="Flow_0mpi2xp" sourceRef="generate" targetRef="Gateway_19wpozq" />
     <bpmn:serviceTask id="generate" name="Генератор" camunda:asyncBefore="true" camunda:type="external" camunda:topic="service-task">
       <bpmn:incoming>Flow_1jf65ng</bpmn:incoming>
+      <bpmn:incoming>Flow_008a5te</bpmn:incoming>
       <bpmn:outgoing>Flow_0mpi2xp</bpmn:outgoing>
     </bpmn:serviceTask>
     <bpmn:exclusiveGateway id="Gateway_19wpozq">
@@ -37,7 +38,13 @@
       <bpmn:incoming>Flow_0lfa0vq</bpmn:incoming>
       <bpmn:outgoing>Flow_1rk9h1b</bpmn:outgoing>
     </bpmn:serviceTask>
+    <bpmn:startEvent id="Event_12iigjw">
+      <bpmn:outgoing>Flow_008a5te</bpmn:outgoing>
+      <bpmn:messageEventDefinition id="MessageEventDefinition_0hpgi9i" messageRef="Message_05nlxl2" />
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="Flow_008a5te" sourceRef="Event_12iigjw" targetRef="generate" />
   </bpmn:process>
+  <bpmn:message id="Message_05nlxl2" name="payment-retrieval-start" />
   <bpmndi:BPMNDiagram id="BPMNDiagram_1">
     <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="payment-retrieval">
       <bpmndi:BPMNEdge id="Flow_1rk9h1b_di" bpmnElement="Flow_1rk9h1b">
@@ -71,6 +78,12 @@
         <di:waypoint x="215" y="117" />
         <di:waypoint x="260" y="117" />
       </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="Flow_008a5te_di" bpmnElement="Flow_008a5te">
+        <di:waypoint x="215" y="260" />
+        <di:waypoint x="238" y="260" />
+        <di:waypoint x="238" y="117" />
+        <di:waypoint x="260" y="117" />
+      </bpmndi:BPMNEdge>
       <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
         <dc:Bounds x="179" y="99" width="36" height="36" />
         <bpmndi:BPMNLabel>
@@ -100,6 +113,9 @@
       </bpmndi:BPMNShape>
       <bpmndi:BPMNShape id="Activity_1onwivo_di" bpmnElement="charge-card-premium">
         <dc:Bounds x="710" y="190" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="Event_0gs7b0o_di" bpmnElement="Event_12iigjw">
+        <dc:Bounds x="179" y="242" width="36" height="36" />
       </bpmndi:BPMNShape>
     </bpmndi:BPMNPlane>
   </bpmndi:BPMNDiagram>

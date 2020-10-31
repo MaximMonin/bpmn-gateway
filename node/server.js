@@ -2,6 +2,7 @@ const { ZBClient, Duration, ZBLogger } = require('zeebe-node');
 const express = require('express');
 const axios = require ('axios'); axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 const http = require ('http');
+const httpagent = new http.Agent({ keepAlive: true });
 const formidable = require('formidable');
 const FormData = require('form-data')
 const fs = require('fs');
@@ -79,6 +80,7 @@ async function main() {
 
 // Camunda Api
 async function CamundaStartProcess (req, res) {
+  const begintime = Date.now();
   const ProcessKey = req.params.key;
   const iParams = Object.assign({}, req.query, req.body);
 
@@ -90,21 +92,56 @@ async function CamundaStartProcess (req, res) {
   var status;
   axios.post( Camundaurl + '/process-definition/key/' + ProcessKey + '/start', 
      {variables: vars}, 
-     {httpAgent: new http.Agent({ keepAlive: true }), timeout: timeout})
+     {httpAgent: httpagent, timeout: timeout})
   .then(response => {
      data = response.data;
      status = "ACTIVE";
      result = {processId: data.id, status: status, data: data };
 
-     if (req.originalUrl.includes("withresult") == true) {
+     if (req.originalUrl.includes("withresult") == false || Date.now() - begintime > timeout) {
+       res.status(200).end(JSON.stringify({result: result}));
+       return;
      }
-
-     res.status(200).end(JSON.stringify({result: result}));
+     var delay = 16;   
+     setTimeout(waitforresult, delay, res, result, delay, begintime + timeout);
   })
   .catch(error => {
      console.log(error.response.data);
      res.status(200).end(JSON.stringify({error: error.response.data}));
   });
+}
+
+async function waitforresult (res, result, delay, endtime) {
+  try {
+    const response = await axios.get(Camundaurl + '/history/process-instance/' + result.processId, {}); 
+    if (response.data.endTime || response.data.state !== 'ACTIVE') {
+      result.status = response.data.state;
+
+      const response2 = await axios.get(Camundaurl + '/history/variable-instance?processInstanceId=' + result.processId); 
+      const vars = response2.data;
+      var obj = {};
+      for ( var i = 0; i < vars.length; i++) {
+        obj[vars[i].name] = vars[i].value;
+      }
+      result.data.variables = obj;
+
+      res.status(200).end(JSON.stringify({result: result}));
+      return;
+    }
+    else {
+      delay = delay * 2;
+      if (delay > 1000) {delay = 1000};
+      if (Date.now () > endtime) {
+        res.status(200).end(JSON.stringify({result: result}));
+        return;
+      }
+      setTimeout(waitforresult, delay, res, result, delay, endtime);
+    }
+  }
+  catch (error) {
+    console.log(error);
+    res.status(200).end(JSON.stringify({error: error}));
+  }
 }
 
 async function CamundaPublishMessage (req, res) {
@@ -122,7 +159,7 @@ async function CamundaPublishMessage (req, res) {
   var status;
   axios.post( Camundaurl + '/message', 
     {messageName: messageName, processInstanceId: processId, processVariables: vars, all: true, resultEnabled: true, variablesInResultEnabled: true}, 
-    {httpAgent: new http.Agent({ keepAlive: true }), timeout: 60000})
+    {httpAgent: httpagent, timeout: 60000})
   .then(response => {
     data = response.data;
     status = "ACTIVE";
